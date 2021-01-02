@@ -324,6 +324,7 @@ classdef Drone < handle
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function set_state(self, pos_ned, vel_xyz, attitude, rates)
             % SET_STATE: Set the drone state to the one passed in argument
+        
             self.set_pos(self, pos_ned)
             self.set_vel(vel_xyz);
             self.attitude = attitude;
@@ -340,8 +341,11 @@ classdef Drone < handle
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function update_state(self, wind, time)
+        function update_state(self, wind, time, uplink)
             % UPDATE_STATE: Compute the new drone state
+            if(nargin < 3)
+               uplink=0;
+            end
             
             self.update_sensor_measurements();
             self.estimate_states(time);
@@ -359,7 +363,7 @@ classdef Drone < handle
                 self.full_command = temp3(5:end);
                 self.compute_dynamics(wind, time);
                 self.compute_kinematics(time);
-                self.update_battery();
+                self.update_battery(uplink);
                 
             elseif self.drone_type == "point_mass"
                 % Computes the new drone position with Euler forward method.
@@ -406,7 +410,7 @@ classdef Drone < handle
         end
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        function update_battery(self)
+        function update_battery(self, pow_uplink)
             % UPDATE_BATTERY: Update the state variables of the battery
             % (i, V, Q)
             %
@@ -419,7 +423,7 @@ classdef Drone < handle
             omega = (self.p_drone.k_omega * self.delta) * 30 / pi; % [rpm]
             pow_motors = self.rpm2power(omega(1)) + self.rpm2power(omega(2)) + ...
                 self.rpm2power(omega(3)) + self.rpm2power(omega(4));
-            pow_tot = param.power_board + pow_motors;
+            pow_tot = param.power_board + pow_motors + pow_uplink;
 
             % Update current vector (i) with the new measurement
             self.i = circshift(self.i, -1);
